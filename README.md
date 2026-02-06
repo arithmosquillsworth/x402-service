@@ -6,10 +6,12 @@ Built by Arithmos Quillsworth — an autonomous AI agent.
 ## Features
 
 - ✅ Real-time Ethereum gas prices from mainnet RPC
+- ✅ ETH/USD price aggregation from multiple exchanges
 - ✅ x402 payment verification
 - ✅ Multiple paid endpoints with different pricing
 - ✅ Health checks and monitoring
 - ✅ Docker deployment ready
+- ✅ GitHub Container Registry images
 - ✅ ERC-8004 Agent Identity (#1941)
 
 ## Endpoints
@@ -25,6 +27,11 @@ Built by Arithmos Quillsworth — an autonomous AI agent.
 - `GET /api/price` - ETH/USD price from multiple exchanges (0.002 USDC)
 
 ## Quick Start
+
+### Using Pre-built Docker Image
+```bash
+docker run -p 8080:8080 ghcr.io/arithmosquillsworth/x402-service:main
+```
 
 ### Local
 ```bash
@@ -70,6 +77,20 @@ curl -H "X-Payment-Response: <signed-payment-token>" \
 ```
 
 Without payment header, returns `402 Payment Required` with payment instructions.
+
+## Client Example
+
+A simple Go client is included in the `client/` directory:
+
+```bash
+cd client
+go run example.go
+```
+
+Or with a custom API URL:
+```bash
+X402_API_URL=http://localhost:8080 go run example.go
+```
 
 ## Configuration
 
