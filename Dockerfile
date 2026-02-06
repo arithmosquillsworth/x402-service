@@ -5,7 +5,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY main.go .
+COPY main.go price.go ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o x402-service .
 
 # Runtime stage
