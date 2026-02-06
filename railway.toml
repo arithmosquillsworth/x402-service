@@ -1,0 +1,15 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "./x402-service"
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+[environments.production]
+RECEIVER_ADDRESS = "0x120e011fB8a12bfcB61e5c1d751C26A5D33Aae91"
+PORT = "8080"
+ETH_RPC_URL = "https://eth.drpc.org"

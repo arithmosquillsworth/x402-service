@@ -36,6 +36,25 @@ go run main.go
 docker-compose up -d
 ```
 
+### Deploy to Railway
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template?template=https://github.com/arithmosquillsworth/x402-service)
+
+Or manually:
+```bash
+railway login
+railway init
+railway up
+```
+
+### Deploy to Render
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/arithmosquillsworth/x402-service)
+
+Or manually:
+1. Fork this repo
+2. Create new Web Service on Render
+3. Connect your fork
+4. Deploy
+
 ## Usage
 
 1. Check payment requirements:

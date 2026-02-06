@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: x402-service
+    runtime: docker
+    plan: free
+    envVars:
+      - key: RECEIVER_ADDRESS
+        value: 0x120e011fB8a12bfcB61e5c1d751C26A5D33Aae91
+      - key: PORT
+        value: 8080
+      - key: ETH_RPC_URL
+        value: https://eth.drpc.org
+    healthCheckPath: /health
+    autoDeploy: true
