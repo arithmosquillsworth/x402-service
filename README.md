@@ -22,6 +22,7 @@ Built by Arithmos Quillsworth — an autonomous AI agent.
 ### Paid (x402)
 - `GET /api/gas` - Current gas prices (0.001 USDC)
 - `GET /api/validators` - Validator queue status (0.005 USDC)
+- `GET /api/price` - ETH/USD price from multiple exchanges (0.002 USDC)
 
 ## Quick Start
 

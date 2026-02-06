@@ -232,6 +232,60 @@ func main() {
 		})
 	})
 
+	// ETH Price endpoint (0.002 USDC)
+	mux.HandleFunc("/api/price", func(w http.ResponseWriter, r *http.Request) {
+		price := "0.002" // USDC
+
+		paymentHeader := r.Header.Get("X-Payment-Response")
+		if paymentHeader == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Payment required",
+				"version": "x402/1.0",
+				"payment": PaymentRequirement{
+					Scheme:      "x402",
+					Network:     config.Network,
+					MaxAmount:   price,
+					MinAmount:   price,
+					Asset:       config.Asset,
+					Receiver:    config.Receiver,
+					Description: "Get ETH/USD price from multiple exchanges",
+				},
+			})
+			return
+		}
+
+		if !validatePayment(paymentHeader, price, config.Asset, config.Receiver) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Invalid or insufficient payment",
+				"version": "x402/1.0",
+			})
+			return
+		}
+
+		priceData, err := fetchETHPrice()
+		if err != nil {
+			log.Printf("Error fetching price: %v", err)
+			// Return fallback data
+			priceData = &PriceData{
+				Timestamp: time.Now().Unix(),
+				Eth:       2700.00,
+				Sources:   map[string]float64{"fallback": 2700.00},
+				Average:   2700.00,
+				Change24h: 0,
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"data":             priceData,
+			"payment_verified": true,
+		})
+	})
+
 	// Agent info endpoint
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -245,6 +299,7 @@ func main() {
 				"/.well-known/x402",
 				"/api/gas",
 				"/api/validators",
+				"/api/price",
 			},
 			"documentation": "https://arithmos.dev",
 		})
