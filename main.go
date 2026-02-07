@@ -241,8 +241,11 @@ func main() {
 			w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 			w.Write([]byte(metrics.PrometheusFormat()))
 		})
-		log.Printf("📊 Metrics server starting on :%s (internal)", metricsPort)
-		log.Fatal(http.ListenAndServe(":"+metricsPort, metricsMux))
+		addr := "0.0.0.0:" + metricsPort
+		log.Printf("📊 Metrics server starting on %s (internal)", addr)
+		if err := http.ListenAndServe(addr, metricsMux); err != nil {
+			log.Printf("❌ Metrics server error: %v", err)
+		}
 	}()
 
 	mux := http.NewServeMux()
