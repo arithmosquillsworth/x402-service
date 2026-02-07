@@ -97,7 +97,52 @@ X402_API_URL=http://localhost:8080 go run example.go
 Environment variables:
 - `RECEIVER_ADDRESS` - Wallet address to receive payments (default: 0x120e011fB8a12bfcB61e5c1d751C26A5D33Aae91)
 - `PORT` - Server port (default: 8080)
+- `METRICS_PORT` - Prometheus metrics port (default: 9090, internal only)
 - `ETH_RPC_URL` - Ethereum RPC endpoint (default: https://eth.drpc.org)
+
+## Metrics
+
+Prometheus metrics are exposed on a separate port (`METRICS_PORT`, default 9090) for internal monitoring.
+
+### Metrics Endpoints
+- `GET /metrics` - Prometheus format metrics (on METRICS_PORT)
+
+### Available Metrics
+- `x402_uptime_seconds` - Service uptime
+- `x402_requests_total{endpoint}` - Total requests by endpoint
+- `x402_requests_by_status_total{endpoint,status}` - Requests by endpoint and status
+- `x402_payments_total` - Total successful payments
+- `x402_payments_by_endpoint_total{endpoint}` - Payments by endpoint
+- `x402_payment_amount_usd_total` - Total revenue in USD
+- `x402_response_time_seconds` - Response time histograms
+
+### Security Note
+The metrics endpoint is intended for **internal monitoring only**. Do not expose port 9090 publicly. Use a reverse proxy or internal network to access metrics.
+
+Example Docker Compose setup with internal monitoring:
+```yaml
+services:
+  x402:
+    image: ghcr.io/arithmosquillsworth/x402-service:main
+    ports:
+      - "8080:8080"  # Public API
+    environment:
+      - METRICS_PORT=9090
+    networks:
+      - internal
+  
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - internal
+    # Only accessible within the internal network
+
+networks:
+  internal:
+    internal: true
+```
 
 ## x402 Protocol
 

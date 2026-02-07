@@ -217,6 +217,7 @@ func main() {
 	// Load config from env or use defaults
 	receiver := getEnv("RECEIVER_ADDRESS", "0x120e011fB8a12bfcB61e5c1d751C26A5D33Aae91")
 	port := getEnv("PORT", "8080")
+	metricsPort := getEnv("METRICS_PORT", "9090")
 	rpcURL := getEnv("ETH_RPC_URL", "https://eth.drpc.org")
 
 	config := ServiceConfig{
@@ -233,13 +234,21 @@ func main() {
 	// Create RPC client
 	rpcClient := &RPCClient{url: rpcURL}
 
+	// Start metrics server on separate port (internal monitoring only)
+	go func() {
+		metricsMux := http.NewServeMux()
+		metricsMux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+			w.Write([]byte(metrics.PrometheusFormat()))
+		})
+		log.Printf("📊 Metrics server starting on :%s (internal)", metricsPort)
+		log.Fatal(http.ListenAndServe(":"+metricsPort, metricsMux))
+	}()
+
 	mux := http.NewServeMux()
 
-	// Metrics endpoint (Prometheus format)
-	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; version=0.0.4")
-		w.Write([]byte(metrics.PrometheusFormat()))
-	})
+	// Health check (free)
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 
 	// Health check (free)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
