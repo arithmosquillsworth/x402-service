@@ -1,0 +1,42 @@
+[Unit]
+Description=Arithmos x402 Payment-Enabled API Service
+Documentation=https://arithmos.dev
+After=network.target
+
+[Service]
+Type=simple
+User=arithmos
+Group=arithmos
+WorkingDirectory=/home/arithmos/projects/arithmosquillsworth/x402-service
+
+# Environment variables
+Environment="PORT=10001"
+Environment="RECEIVER_ADDRESS=0x120e011fB8a12bfcB61e5c1d751C26A5D33Aae91"
+Environment="ETH_RPC_URL=https://eth.drpc.org"
+Environment="BEACON_API_URL=https://ethereum-beacon-api.publicnode.com"
+
+# The service binary
+ExecStart=/home/arithmos/projects/arithmosquillsworth/x402-service/x402-service
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60s
+StartLimitBurst=3
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/arithmos/projects/arithmosquillsworth/x402-service
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=x402-service
+
+[Install]
+WantedBy=multi-user.target

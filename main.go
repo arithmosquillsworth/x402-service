@@ -6,8 +6,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -66,6 +69,150 @@ type PaymentToken struct {
 	jwt.RegisteredClaims
 }
 
+// Metrics holds Prometheus-style metrics
+type Metrics struct {
+	mu sync.RWMutex
+	
+	// Request counters
+	requestsTotal    map[string]int64 // endpoint -> count
+	requestsByStatus map[string]map[string]int64 // endpoint -> status -> count
+	
+	// Payment counters
+	paymentsTotal    int64
+	paymentsByEndpoint map[string]int64 // endpoint -> count
+	paymentAmountUSD float64
+	
+	// Response time tracking (simple histogram buckets)
+	responseTimeBuckets map[string][]float64 // endpoint -> []durations
+	
+	// Start time for uptime
+	startTime time.Time
+}
+
+// NewMetrics creates a new metrics collector
+func NewMetrics() *Metrics {
+	return &Metrics{
+		requestsTotal:       make(map[string]int64),
+		requestsByStatus:    make(map[string]map[string]int64),
+		paymentsByEndpoint:  make(map[string]int64),
+		responseTimeBuckets: make(map[string][]float64),
+		startTime:          time.Now(),
+	}
+}
+
+// RecordRequest records a request
+func (m *Metrics) RecordRequest(endpoint, status string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.requestsTotal[endpoint]++
+	
+	if m.requestsByStatus[endpoint] == nil {
+		m.requestsByStatus[endpoint] = make(map[string]int64)
+	}
+	m.requestsByStatus[endpoint][status]++
+}
+
+// RecordPayment records a successful payment
+func (m *Metrics) RecordPayment(endpoint string, amountUSD float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	atomic.AddInt64(&m.paymentsTotal, 1)
+	m.paymentsByEndpoint[endpoint]++
+	m.paymentAmountUSD += amountUSD
+}
+
+// RecordResponseTime records response duration
+func (m *Metrics) RecordResponseTime(endpoint string, duration time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.responseTimeBuckets[endpoint] = append(m.responseTimeBuckets[endpoint], duration.Seconds())
+	// Keep last 1000 samples per endpoint
+	if len(m.responseTimeBuckets[endpoint]) > 1000 {
+		m.responseTimeBuckets[endpoint] = m.responseTimeBuckets[endpoint][1:]
+	}
+}
+
+// PrometheusFormat returns metrics in Prometheus exposition format
+func (m *Metrics) PrometheusFormat() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	var b strings.Builder
+	uptime := time.Since(m.startTime).Seconds()
+	
+	// HELP and TYPE
+	b.WriteString("# HELP x402_uptime_seconds Service uptime\n")
+	b.WriteString("# TYPE x402_uptime_seconds gauge\n")
+	b.WriteString(fmt.Sprintf("x402_uptime_seconds %.2f\n", uptime))
+	
+	b.WriteString("# HELP x402_requests_total Total requests by endpoint\n")
+	b.WriteString("# TYPE x402_requests_total counter\n")
+	for endpoint, count := range m.requestsTotal {
+		b.WriteString(fmt.Sprintf("x402_requests_total{endpoint=\"%s\"} %d\n", endpoint, count))
+	}
+	
+	b.WriteString("# HELP x402_requests_by_status_total Requests by endpoint and status\n")
+	b.WriteString("# TYPE x402_requests_by_status_total counter\n")
+	for endpoint, statuses := range m.requestsByStatus {
+		for status, count := range statuses {
+			b.WriteString(fmt.Sprintf("x402_requests_by_status_total{endpoint=\"%s\",status=\"%s\"} %d\n", endpoint, status, count))
+		}
+	}
+	
+	b.WriteString("# HELP x402_payments_total Total successful payments\n")
+	b.WriteString("# TYPE x402_payments_total counter\n")
+	b.WriteString(fmt.Sprintf("x402_payments_total %d\n", atomic.LoadInt64(&m.paymentsTotal)))
+	
+	b.WriteString("# HELP x402_payments_by_endpoint_total Payments by endpoint\n")
+	b.WriteString("# TYPE x402_payments_by_endpoint_total counter\n")
+	for endpoint, count := range m.paymentsByEndpoint {
+		b.WriteString(fmt.Sprintf("x402_payments_by_endpoint_total{endpoint=\"%s\"} %d\n", endpoint, count))
+	}
+	
+	b.WriteString("# HELP x402_payment_amount_usd_total Total payment amount in USD\n")
+	b.WriteString("# TYPE x402_payment_amount_usd_total counter\n")
+	b.WriteString(fmt.Sprintf("x402_payment_amount_usd_total %.6f\n", m.paymentAmountUSD))
+	
+	// Response time histograms
+	b.WriteString("# HELP x402_response_time_seconds Response time in seconds\n")
+	b.WriteString("# TYPE x402_response_time_seconds histogram\n")
+	for endpoint, times := range m.responseTimeBuckets {
+		if len(times) == 0 {
+			continue
+		}
+		// Sort for percentile calculation
+		sorted := make([]float64, len(times))
+		copy(sorted, times)
+		sort.Float64s(sorted)
+		
+		count := len(sorted)
+		sum := 0.0
+		for _, t := range sorted {
+			sum += t
+		}
+		
+		// Calculate buckets (0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
+		buckets := []float64{0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
+		for _, bucket := range buckets {
+			bucketCount := 0
+			for _, t := range sorted {
+				if t <= bucket {
+					bucketCount++
+				}
+			}
+			b.WriteString(fmt.Sprintf("x402_response_time_seconds_bucket{endpoint=\"%s\",le=\"%.3f\"} %d\n", endpoint, bucket, bucketCount))
+		}
+		b.WriteString(fmt.Sprintf("x402_response_time_seconds_bucket{endpoint=\"%s\",le=\"+Inf\"} %d\n", endpoint, count))
+		b.WriteString(fmt.Sprintf("x402_response_time_seconds_sum{endpoint=\"%s\"} %.6f\n", endpoint, sum))
+		b.WriteString(fmt.Sprintf("x402_response_time_seconds_count{endpoint=\"%s\"} %d\n", endpoint, count))
+	}
+	
+	return b.String()
+}
+
 func main() {
 	// Load config from env or use defaults
 	receiver := getEnv("RECEIVER_ADDRESS", "0x120e011fB8a12bfcB61e5c1d751C26A5D33Aae91")
@@ -80,13 +227,23 @@ func main() {
 		Description: "Arithmos API - Real-time Ethereum data",
 	}
 
+	// Initialize metrics
+	metrics := NewMetrics()
+
 	// Create RPC client
 	rpcClient := &RPCClient{url: rpcURL}
 
 	mux := http.NewServeMux()
 
+	// Metrics endpoint (Prometheus format)
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+		w.Write([]byte(metrics.PrometheusFormat()))
+	})
+
 	// Health check (free)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "ok",
@@ -95,10 +252,13 @@ func main() {
 			"erc8004":   "1941",
 			"timestamp": time.Now().Unix(),
 		})
+		metrics.RecordRequest("/health", "200")
+		metrics.RecordResponseTime("/health", time.Since(start))
 	})
 
 	// x402 config endpoint
 	mux.HandleFunc("/.well-known/x402", func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		x402 := X402Config{
 			Version: "1.0",
 			PaymentRequirements: []PaymentRequirement{
@@ -115,11 +275,15 @@ func main() {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(x402)
+		metrics.RecordRequest("/.well-known/x402", "200")
+		metrics.RecordResponseTime("/.well-known/x402", time.Since(start))
 	})
 
 	// Protected endpoint - real gas prices
 	mux.HandleFunc("/api/gas", func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		price := "0.001" // USDC
+		priceFloat := 0.001
 
 		// Check for x402 payment
 		paymentHeader := r.Header.Get("X-Payment-Response")
@@ -139,6 +303,8 @@ func main() {
 					Description: "Get current Ethereum gas prices",
 				},
 			})
+			metrics.RecordRequest("/api/gas", "402")
+			metrics.RecordResponseTime("/api/gas", time.Since(start))
 			return
 		}
 
@@ -150,8 +316,13 @@ func main() {
 				"error":   "Invalid or insufficient payment",
 				"version": "x402/1.0",
 			})
+			metrics.RecordRequest("/api/gas", "402")
+			metrics.RecordResponseTime("/api/gas", time.Since(start))
 			return
 		}
+
+		// Record successful payment
+		metrics.RecordPayment("/api/gas", priceFloat)
 
 		// Fetch real gas prices
 		gasData, err := rpcClient.fetchGasPrices()
@@ -175,11 +346,15 @@ func main() {
 			"data":             gasData,
 			"payment_verified": true,
 		})
+		metrics.RecordRequest("/api/gas", "200")
+		metrics.RecordResponseTime("/api/gas", time.Since(start))
 	})
 
 	// Validator queue endpoint
 	mux.HandleFunc("/api/validators", func(w http.ResponseWriter, r *http.Request) {
-		price := "0.005" // USDC - more expensive
+		start := time.Now()
+		price := "0.005" // USDC
+		priceFloat := 0.005
 
 		paymentHeader := r.Header.Get("X-Payment-Response")
 		if paymentHeader == "" {
@@ -198,6 +373,8 @@ func main() {
 					Description: "Get validator queue status",
 				},
 			})
+			metrics.RecordRequest("/api/validators", "402")
+			metrics.RecordResponseTime("/api/validators", time.Since(start))
 			return
 		}
 
@@ -208,8 +385,12 @@ func main() {
 				"error":   "Invalid or insufficient payment",
 				"version": "x402/1.0",
 			})
+			metrics.RecordRequest("/api/validators", "402")
+			metrics.RecordResponseTime("/api/validators", time.Since(start))
 			return
 		}
+
+		metrics.RecordPayment("/api/validators", priceFloat)
 
 		validatorData, err := rpcClient.fetchValidatorData()
 		if err != nil {
@@ -230,11 +411,15 @@ func main() {
 			"data":             validatorData,
 			"payment_verified": true,
 		})
+		metrics.RecordRequest("/api/validators", "200")
+		metrics.RecordResponseTime("/api/validators", time.Since(start))
 	})
 
 	// ETH Price endpoint (0.002 USDC)
 	mux.HandleFunc("/api/price", func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		price := "0.002" // USDC
+		priceFloat := 0.002
 
 		paymentHeader := r.Header.Get("X-Payment-Response")
 		if paymentHeader == "" {
@@ -253,6 +438,8 @@ func main() {
 					Description: "Get ETH/USD price from multiple exchanges",
 				},
 			})
+			metrics.RecordRequest("/api/price", "402")
+			metrics.RecordResponseTime("/api/price", time.Since(start))
 			return
 		}
 
@@ -263,8 +450,12 @@ func main() {
 				"error":   "Invalid or insufficient payment",
 				"version": "x402/1.0",
 			})
+			metrics.RecordRequest("/api/price", "402")
+			metrics.RecordResponseTime("/api/price", time.Since(start))
 			return
 		}
+
+		metrics.RecordPayment("/api/price", priceFloat)
 
 		priceData, err := fetchETHPrice()
 		if err != nil {
@@ -284,10 +475,13 @@ func main() {
 			"data":             priceData,
 			"payment_verified": true,
 		})
+		metrics.RecordRequest("/api/price", "200")
+		metrics.RecordResponseTime("/api/price", time.Since(start))
 	})
 
 	// Agent info endpoint
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"agent":        "Arithmos Quillsworth",
@@ -300,9 +494,12 @@ func main() {
 				"/api/gas",
 				"/api/validators",
 				"/api/price",
+				"/metrics",
 			},
 			"documentation": "https://arithmos.dev",
 		})
+		metrics.RecordRequest("/", "200")
+		metrics.RecordResponseTime("/", time.Since(start))
 	})
 
 	log.Printf("🚀 x402 service starting on :%s", port)
