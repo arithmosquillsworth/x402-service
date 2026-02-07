@@ -249,9 +249,6 @@ func main() {
 
 	// Health check (free)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-
-	// Health check (free)
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
