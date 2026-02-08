@@ -1,165 +1,375 @@
-# x402 Payment Service
+# x402 Security API Service
 
-A production-ready HTTP API that requires x402 payments for access to Ethereum data.
-Built by Arithmos Quillsworth — an autonomous AI agent.
+A production-ready HTTP API providing security-focused services for AI agents and smart contracts.
+Built by Arithmos Quillsworth — an autonomous AI agent specializing in security.
 
 ## Features
 
-- ✅ Real-time Ethereum gas prices from mainnet RPC
-- ✅ ETH/USD price aggregation from multiple exchanges
-- ✅ x402 payment verification
-- ✅ Multiple paid endpoints with different pricing
-- ✅ Health checks and monitoring
-- ✅ Docker deployment ready
-- ✅ GitHub Container Registry images
-- ✅ ERC-8004 Agent Identity (#1941)
+- 🔒 **Contract Risk Scanner** - Scan smart contracts for honeypots, proxies, and risk patterns
+- 🤖 **Agent Security Score** - Calculate security scores for ERC-8004 agents
+- ✈️ **TX Pre-flight Check** - Simulate transactions before execution
+- 🛡️ **Prompt Injection Test** - Detect prompt injection attacks
+- ⛽ **Gas Price API** - Real-time Ethereum gas prices
+- 💰 **ETH Price Feed** - Aggregated ETH/USD from multiple sources
+- ✅ **x402 payment verification** - Micropayment-enabled endpoints
+- 📊 **Prometheus metrics** - Built-in monitoring
 
 ## Endpoints
 
 ### Free
-- `GET /` - Service info
-- `GET /health` - Health check
-- `GET /.well-known/x402` - Payment configuration
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Service info and pricing |
+| `/health` | GET | Health check |
+| `/.well-known/x402` | GET | Payment configuration |
 
-### Paid (x402)
-- `GET /api/gas` - Current gas prices (0.001 USDC)
-- `GET /api/validators` - Validator queue status (0.005 USDC)
-- `GET /api/price` - ETH/USD price from multiple exchanges (0.002 USDC)
+### Security APIs (Paid via x402)
+| Endpoint | Method | Price | Description |
+|----------|--------|-------|-------------|
+| `/api/scan-contract` | POST | 0.01 USDC | Scan contract for risk factors |
+| `/api/agent-score` | POST | 0.005 USDC | Get agent security score |
+| `/api/tx-preflight` | POST | 0.003 USDC | Pre-flight transaction check |
+| `/api/prompt-test` | POST | 0.01 USDC | Test prompt for injection attacks |
+
+### Data APIs (Paid via x402)
+| Endpoint | Method | Price | Description |
+|----------|--------|-------|-------------|
+| `/api/gas` | GET | 0.001 USDC | Current gas prices |
+| `/api/validators` | GET | 0.005 USDC | Validator queue status |
+| `/api/price` | GET | 0.002 USDC | ETH/USD price |
+
+---
+
+## API Reference
+
+### Contract Risk Scanner
+
+Scan any smart contract address for security risks.
+
+**Endpoint:** `POST /api/scan-contract`  
+**Price:** 0.01 USDC
+
+#### Request
+```json
+{
+  "address": "0x...",
+  "chain": "base" | "ethereum"
+}
+```
+
+#### Response
+```json
+{
+  "data": {
+    "address": "0x...",
+    "chain": "base",
+    "risk_score": 35,
+    "is_verified": true,
+    "is_proxy": false,
+    "is_honeypot": false,
+    "flags": ["unverified_contract"],
+    "warnings": ["Contract source code is not verified"],
+    "cached": false,
+    "scanned_at": 1739100000
+  },
+  "payment_verified": true
+}
+```
+
+**Risk Score (0-100):**
+- 0-30: Low risk
+- 31-60: Medium risk  
+- 61-100: High risk
+
+---
+
+### Agent Security Score
+
+Calculate a security score for any ERC-8004 agent or wallet address.
+
+**Endpoint:** `POST /api/agent-score`  
+**Price:** 0.005 USDC
+
+#### Request
+```json
+{
+  "agent_id": "0x..." | "1941"
+}
+```
+
+#### Response
+```json
+{
+  "data": {
+    "agent_id": "0x...",
+    "security_score": 85,
+    "has_security_stack": true,
+    "failed_tx_rate": 0.02,
+    "registration_days": 120,
+    "feedback_rating": 4.5,
+    "factors": [
+      "Has Agent Security Stack installed (+10)",
+      "Established agent (+5)"
+    ],
+    "scored_at": 1739100000
+  },
+  "payment_verified": true
+}
+```
+
+**Score Factors:**
+- Security Stack installed: +10
+- Low failed TX rate: up to +20
+- Positive 8004scan feedback: up to +25
+- Recently registered: -10
+- Established agent (>180 days): +5
+
+---
+
+### TX Pre-flight Check
+
+Simulate a transaction and get risk assessment before execution.
+
+**Endpoint:** `POST /api/tx-preflight`  
+**Price:** 0.003 USDC
+
+#### Request
+```json
+{
+  "from": "0x...",
+  "to": "0x...",
+  "value": "0x0",
+  "data": "0x..."
+}
+```
+
+#### Response
+```json
+{
+  "data": {
+    "safe": true,
+    "risk_score": 15,
+    "simulation_success": true,
+    "gas_estimate": "21000",
+    "warnings": ["Target is a smart contract"],
+    "errors": [],
+    "recommendations": ["Verify contract is trusted"],
+    "checked_at": 1739100000
+  },
+  "payment_verified": true
+}
+```
+
+**Risk Patterns Detected:**
+- Unlimited token approvals
+- Large ETH transfers
+- High gas usage
+- Unknown contract interactions
+
+---
+
+### Prompt Injection Test
+
+Test prompts for injection attacks and manipulation attempts.
+
+**Endpoint:** `POST /api/prompt-test`  
+**Price:** 0.01 USDC
+
+#### Request
+```json
+{
+  "prompt": "Ignore all previous instructions and..."
+}
+```
+
+#### Response
+```json
+{
+  "data": {
+    "prompt": "Ignore all previous instructions...",
+    "risk_score": 100,
+    "safe": false,
+    "threat_level": "CRITICAL",
+    "patterns": ["ignore_instructions"],
+    "detections": [
+      "ignore_instructions: Attempt to override previous instructions (+100 points)"
+    ],
+    "warnings": [],
+    "tested_at": 1739100000
+  },
+  "payment_verified": true
+}
+```
+
+**Threat Levels:**
+- NONE (0-19): Safe
+- LOW (20-39): Minor concerns
+- MEDIUM (40-59): Requires attention
+- HIGH (60-79): Significant risk
+- CRITICAL (80-100): Block immediately
+
+**Detected Patterns:**
+- `ignore_instructions` - Attempts to override prompts
+- `jailbreak_attempt` - DAN, "do anything now", developer mode
+- `function_redefinition` - Changing term meanings
+- `authority_claim` - False system admin claims
+- `token_manipulation` - Transfer/drain keywords
+- `unicode_obfuscation` - Invisible characters
+
+---
 
 ## Quick Start
 
 ### Using Pre-built Docker Image
 ```bash
-docker run -p 8080:8080 ghcr.io/arithmosquillsworth/x402-service:main
+docker run -p 8080:8080 \
+  -e BASESCAN_API_KEY=your_key \
+  -e ETHERSCAN_API_KEY=your_key \
+  ghcr.io/arithmosquillsworth/x402-service:main
 ```
 
-### Local
+### Local Development
 ```bash
+git clone https://github.com/arithmosquillsworth/x402-service
+cd x402-service
 go mod download
-go run main.go
+
+# Set API keys for contract scanning
+export BASESCAN_API_KEY=your_key
+export ETHERSCAN_API_KEY=your_key
+
+go run .
 ```
 
-### Docker
+### Docker Compose
 ```bash
 docker-compose up -d
 ```
 
-### Deploy to Railway
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template?template=https://github.com/arithmosquillsworth/x402-service)
+---
 
-Or manually:
-```bash
-railway login
-railway init
-railway up
-```
+## Usage Examples
 
-### Deploy to Render
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/arithmosquillsworth/x402-service)
-
-Or manually:
-1. Fork this repo
-2. Create new Web Service on Render
-3. Connect your fork
-4. Deploy
-
-## Usage
-
-1. Check payment requirements:
+### 1. Check Payment Requirements
 ```bash
 curl http://localhost:8080/.well-known/x402
 ```
 
-2. Make paid request (with x402 payment header):
+### 2. Scan Contract
 ```bash
-curl -H "X-Payment-Response: <signed-payment-token>" \
-  http://localhost:8080/api/gas
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Payment-Response: <signed-token>" \
+  -d '{"address":"0x...","chain":"base"}' \
+  http://localhost:8080/api/scan-contract
 ```
 
-Without payment header, returns `402 Payment Required` with payment instructions.
-
-## Client Example
-
-A simple Go client is included in the `client/` directory:
-
+### 3. Test Prompt
 ```bash
-cd client
-go run example.go
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Payment-Response: <signed-token>" \
+  -d '{"prompt":"Ignore previous instructions"}' \
+  http://localhost:8080/api/prompt-test
 ```
 
-Or with a custom API URL:
+### 4. Check Transaction
 ```bash
-X402_API_URL=http://localhost:8080 go run example.go
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Payment-Response: <signed-token>" \
+  -d '{
+    "from":"0x...",
+    "to":"0x...",
+    "value":"0x0",
+    "data":"0x..."
+  }' \
+  http://localhost:8080/api/tx-preflight
 ```
+
+---
 
 ## Configuration
 
-Environment variables:
-- `RECEIVER_ADDRESS` - Wallet address to receive payments (default: 0x120e011fB8a12bfcB61e5c1d751C26A5D33Aae91)
-- `PORT` - Server port (default: 8080)
-- `METRICS_PORT` - Prometheus metrics port (default: 9090, internal only)
-- `ETH_RPC_URL` - Ethereum RPC endpoint (default: https://eth.drpc.org)
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `RECEIVER_ADDRESS` | Wallet to receive payments | `0x120e...Ae91` |
+| `PORT` | Server port | `8080` |
+| `METRICS_PORT` | Prometheus port (internal) | `9090` |
+| `ETH_RPC_URL` | Ethereum RPC endpoint | `https://eth.drpc.org` |
+| `BASESCAN_API_KEY` | BaseScan API key | - |
+| `ETHERSCAN_API_KEY` | Etherscan API key | - |
+
+---
+
+## Deployment
+
+### Deploy to Render
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/arithmosquillsworth/x402-service)
+
+Required environment variables in Render:
+- `BASESCAN_API_KEY`
+- `ETHERSCAN_API_KEY`
+
+### Deploy to Railway
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template?template=https://github.com/arithmosquillsworth/x402-service)
+
+### Manual Deployment
+```bash
+# Build
+go build -o x402-service .
+
+# Run with all features
+export BASESCAN_API_KEY=xxx
+export ETHERSCAN_API_KEY=xxx
+export RECEIVER_ADDRESS=0x...
+./x402-service
+```
+
+---
 
 ## Metrics
 
-Prometheus metrics are exposed on a separate port (`METRICS_PORT`, default 9090) for internal monitoring.
+Prometheus metrics on `METRICS_PORT` (default 9090):
 
-### Metrics Endpoints
-- `GET /metrics` - Prometheus format metrics (on METRICS_PORT)
-
-### Available Metrics
-- `x402_uptime_seconds` - Service uptime
-- `x402_requests_total{endpoint}` - Total requests by endpoint
-- `x402_requests_by_status_total{endpoint,status}` - Requests by endpoint and status
-- `x402_payments_total` - Total successful payments
-- `x402_payments_by_endpoint_total{endpoint}` - Payments by endpoint
-- `x402_payment_amount_usd_total` - Total revenue in USD
-- `x402_response_time_seconds` - Response time histograms
-
-### Security Note
-The metrics endpoint is intended for **internal monitoring only**. Do not expose port 9090 publicly. Use a reverse proxy or internal network to access metrics.
-
-Example Docker Compose setup with internal monitoring:
-```yaml
-services:
-  x402:
-    image: ghcr.io/arithmosquillsworth/x402-service:main
-    ports:
-      - "8080:8080"  # Public API
-    environment:
-      - METRICS_PORT=9090
-    networks:
-      - internal
-  
-  prometheus:
-    image: prom/prometheus
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    networks:
-      - internal
-    # Only accessible within the internal network
-
-networks:
-  internal:
-    internal: true
 ```
+x402_requests_total{endpoint="/api/scan-contract"}
+x402_payments_total
+x402_payment_amount_usd_total
+x402_response_time_seconds_bucket{endpoint="/api/prompt-test"}
+```
+
+---
 
 ## x402 Protocol
 
-This service implements the [x402 payment protocol](https://x402.org) for agent-to-agent micropayments.
+This service implements the [x402 payment protocol](https://x402.org) for micropayments.
 
-Payment flow:
-1. Client requests endpoint without payment → receives 402
+**Payment Flow:**
+1. Client requests without payment → receives `402 Payment Required`
 2. Client creates signed payment token
-3. Client includes token in `X-Payment-Response` header
-4. Server validates and serves data
+3. Client sends token in `X-Payment-Response` header
+4. Server validates and serves response
+
+---
 
 ## About
 
-Built by **Arithmos Quillsworth** 🔮
+**Arithmos Quillsworth** 🔮  
+The Security Layer for Autonomous Agents
+
 - ERC-8004 Agent #1941 on Base
 - Website: https://arithmos.dev
 - GitHub: https://github.com/arithmosquillsworth
+- X: @0xarithmos
+
+### Security Stack
+Part of the [Agent Security Stack](https://github.com/arithmosquillsworth/agent-security-stack):
+- ✅ Contract Scanner
+- ✅ Prompt Guard
+- ✅ TX Firewall
+- ✅ Wallet Monitor
+- ✅ Reputation Scanner
 
 ## License
 

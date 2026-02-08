@@ -1,64 +1,65 @@
 #!/bin/bash
-# Render Deployment Script for x402-service
+# Deploy x402 Security API Service to Render
 # Usage: ./deploy-render.sh [service-name]
 
 set -e
 
-SERVICE_NAME="${1:-x402-service}"
-REPO_DIR="$HOME/projects/arithmosquillsworth/x402-service"
+SERVICE_NAME="${1:-x402-security-service}"
 
-echo "🚀 Render Deployment Script"
-echo "============================"
-echo "Service: $SERVICE_NAME"
+echo "🚀 Deploying x402 Security API Service to Render..."
 echo ""
 
-# Check if we're in the right directory
-if [ ! -f "$REPO_DIR/render.yaml" ]; then
-    echo "❌ Error: render.yaml not found in $REPO_DIR"
-    echo "Please run this script from the x402-service directory"
-    exit 1
-fi
-
-cd "$REPO_DIR"
-
-# Check if render CLI is available
+# Check if render CLI is installed
 if ! command -v render &> /dev/null; then
-    echo "⚠️  Render CLI not found"
-    echo "Install with: curl -fsSL https://raw.githubusercontent.com/render-oss/render-cli/main/install.sh | bash"
-    echo ""
-    echo "Alternatively, deploy manually:"
-    echo "1. Go to https://dashboard.render.com"
-    echo "2. Click 'New +' → 'Web Service'"
-    echo "3. Connect GitHub repo: arithmosquillsworth/x402-service"
-    echo "4. Select 'Docker' runtime"
-    echo "5. Set environment variables if needed"
+    echo "❌ Render CLI not found. Install with:"
+    echo "   curl -fsSL https://raw.githubusercontent.com/render-oss/render-cli/main/install.sh | bash"
     exit 1
 fi
 
 # Check if logged in
-echo "🔍 Checking Render login status..."
 if ! render whoami &> /dev/null; then
-    echo "❌ Not logged in to Render"
-    echo "Run: render login"
+    echo "🔑 Please login to Render:"
+    render login
+fi
+
+# Check environment variables
+echo "📋 Checking environment variables..."
+
+if [ -z "$BASESCAN_API_KEY" ]; then
+    echo "⚠️  Warning: BASESCAN_API_KEY not set"
+    echo "   Contract scanning on Base will not work"
+fi
+
+if [ -z "$ETHERSCAN_API_KEY" ]; then
+    echo "⚠️  Warning: ETHERSCAN_API_KEY not set"
+    echo "   Contract scanning on Ethereum will not work"
+fi
+
+# Build locally to verify
+echo ""
+echo "🔨 Building locally to verify..."
+go build -o x402-service .
+
+if [ $? -ne 0 ]; then
+    echo "❌ Build failed! Fix errors before deploying."
     exit 1
 fi
 
-echo "✅ Logged in as: $(render whoami)"
-echo ""
+echo "✅ Build successful"
 
-# Check if service already exists
-echo "🔍 Checking if service exists..."
-if render services list | grep -q "$SERVICE_NAME"; then
-    echo "✅ Service exists, deploying latest commit..."
-    render deploy "$SERVICE_NAME" --wait
-else
-    echo "🆕 Creating new service from render.yaml..."
-    render blueprint apply render.yaml --wait
-fi
+# Deploy
+echo ""
+echo "📤 Deploying to Render..."
+render deploy --service "$SERVICE_NAME"
 
 echo ""
-echo "✅ Deployment complete!"
+echo "✅ Deployment initiated!"
 echo ""
-echo "📊 Service URL: https://$SERVICE_NAME.onrender.com"
-echo "🔍 Check status: render services info $SERVICE_NAME"
-echo "📜 View logs: render logs $SERVICE_NAME"
+echo "🔗 Useful commands:"
+echo "   render services                    # List services"
+echo "   render logs --service $SERVICE_NAME    # View logs"
+echo "   render ssh --service $SERVICE_NAME     # SSH into service"
+echo ""
+echo "📝 Don't forget to set environment variables in Render dashboard:"
+echo "   - BASESCAN_API_KEY"
+echo "   - ETHERSCAN_API_KEY"

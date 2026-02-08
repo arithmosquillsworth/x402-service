@@ -488,22 +488,233 @@ func main() {
 		metrics.RecordResponseTime("/api/price", time.Since(start))
 	})
 
+	// Initialize security services
+	contractScanner := NewContractScanner()
+	agentScorer := NewAgentScorer()
+	txSimulator := NewTxSimulator(rpcURL)
+	promptGuard := NewPromptGuard()
+
+	// Contract Risk Scanner ($0.01 USDC)
+	mux.HandleFunc("/api/scan-contract", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		start := time.Now()
+		price := "0.01" // USDC
+		priceFloat := 0.01
+
+		paymentHeader := r.Header.Get("X-Payment-Response")
+		if paymentHeader == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Payment required",
+				"version": "x402/1.0",
+				"payment": PaymentRequirement{
+					Scheme:      "x402",
+					Network:     config.Network,
+					MaxAmount:   price,
+					MinAmount:   price,
+					Asset:       config.Asset,
+					Receiver:    config.Receiver,
+					Description: "Scan smart contract for risk factors",
+				},
+			})
+			metrics.RecordRequest("/api/scan-contract", "402")
+			metrics.RecordResponseTime("/api/scan-contract", time.Since(start))
+			return
+		}
+
+		if !validatePayment(paymentHeader, price, config.Asset, config.Receiver) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Invalid or insufficient payment",
+				"version": "x402/1.0",
+			})
+			metrics.RecordRequest("/api/scan-contract", "402")
+			metrics.RecordResponseTime("/api/scan-contract", time.Since(start))
+			return
+		}
+
+		metrics.RecordPayment("/api/scan-contract", priceFloat)
+		handleContractScan(w, r, contractScanner, metrics)
+	})
+
+	// Agent Security Score ($0.005 USDC)
+	mux.HandleFunc("/api/agent-score", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		start := time.Now()
+		price := "0.005" // USDC
+		priceFloat := 0.005
+
+		paymentHeader := r.Header.Get("X-Payment-Response")
+		if paymentHeader == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Payment required",
+				"version": "x402/1.0",
+				"payment": PaymentRequirement{
+					Scheme:      "x402",
+					Network:     config.Network,
+					MaxAmount:   price,
+					MinAmount:   price,
+					Asset:       config.Asset,
+					Receiver:    config.Receiver,
+					Description: "Get security score for ERC-8004 agent",
+				},
+			})
+			metrics.RecordRequest("/api/agent-score", "402")
+			metrics.RecordResponseTime("/api/agent-score", time.Since(start))
+			return
+		}
+
+		if !validatePayment(paymentHeader, price, config.Asset, config.Receiver) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Invalid or insufficient payment",
+				"version": "x402/1.0",
+			})
+			metrics.RecordRequest("/api/agent-score", "402")
+			metrics.RecordResponseTime("/api/agent-score", time.Since(start))
+			return
+		}
+
+		metrics.RecordPayment("/api/agent-score", priceFloat)
+		handleAgentScore(w, r, agentScorer, metrics)
+	})
+
+	// TX Pre-flight Check ($0.003 USDC)
+	mux.HandleFunc("/api/tx-preflight", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		start := time.Now()
+		price := "0.003" // USDC
+		priceFloat := 0.003
+
+		paymentHeader := r.Header.Get("X-Payment-Response")
+		if paymentHeader == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Payment required",
+				"version": "x402/1.0",
+				"payment": PaymentRequirement{
+					Scheme:      "x402",
+					Network:     config.Network,
+					MaxAmount:   price,
+					MinAmount:   price,
+					Asset:       config.Asset,
+					Receiver:    config.Receiver,
+					Description: "Pre-flight transaction risk check",
+				},
+			})
+			metrics.RecordRequest("/api/tx-preflight", "402")
+			metrics.RecordResponseTime("/api/tx-preflight", time.Since(start))
+			return
+		}
+
+		if !validatePayment(paymentHeader, price, config.Asset, config.Receiver) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Invalid or insufficient payment",
+				"version": "x402/1.0",
+			})
+			metrics.RecordRequest("/api/tx-preflight", "402")
+			metrics.RecordResponseTime("/api/tx-preflight", time.Since(start))
+			return
+		}
+
+		metrics.RecordPayment("/api/tx-preflight", priceFloat)
+		handleTxPreflight(w, r, txSimulator, metrics)
+	})
+
+	// Prompt Injection Test ($0.01 USDC)
+	mux.HandleFunc("/api/prompt-test", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		start := time.Now()
+		price := "0.01" // USDC
+		priceFloat := 0.01
+
+		paymentHeader := r.Header.Get("X-Payment-Response")
+		if paymentHeader == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Payment required",
+				"version": "x402/1.0",
+				"payment": PaymentRequirement{
+					Scheme:      "x402",
+					Network:     config.Network,
+					MaxAmount:   price,
+					MinAmount:   price,
+					Asset:       config.Asset,
+					Receiver:    config.Receiver,
+					Description: "Test prompt for injection attacks",
+				},
+			})
+			metrics.RecordRequest("/api/prompt-test", "402")
+			metrics.RecordResponseTime("/api/prompt-test", time.Since(start))
+			return
+		}
+
+		if !validatePayment(paymentHeader, price, config.Asset, config.Receiver) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Invalid or insufficient payment",
+				"version": "x402/1.0",
+			})
+			metrics.RecordRequest("/api/prompt-test", "402")
+			metrics.RecordResponseTime("/api/prompt-test", time.Since(start))
+			return
+		}
+
+		metrics.RecordPayment("/api/prompt-test", priceFloat)
+		handlePromptTest(w, r, promptGuard, metrics)
+	})
+
 	// Agent info endpoint
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"agent":        "Arithmos Quillsworth",
-			"type":         "autonomous AI agent",
-			"erc8004_id":   "1941",
-			"service":      "x402 payment-enabled API",
+			"agent":      "Arithmos Quillsworth",
+			"type":       "autonomous AI agent",
+			"erc8004_id": "1941",
+			"service":    "x402 payment-enabled API",
 			"endpoints": []string{
 				"/health",
 				"/.well-known/x402",
 				"/api/gas",
 				"/api/validators",
 				"/api/price",
+				"/api/scan-contract",
+				"/api/agent-score",
+				"/api/tx-preflight",
+				"/api/prompt-test",
 				"/metrics",
+			},
+			"pricing": map[string]string{
+				"/api/gas":            "0.001 USDC",
+				"/api/validators":     "0.005 USDC",
+				"/api/price":          "0.002 USDC",
+				"/api/scan-contract":  "0.01 USDC",
+				"/api/agent-score":    "0.005 USDC",
+				"/api/tx-preflight":   "0.003 USDC",
+				"/api/prompt-test":    "0.01 USDC",
 			},
 			"documentation": "https://arithmos.dev",
 		})

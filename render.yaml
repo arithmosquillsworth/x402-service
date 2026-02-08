@@ -1,20 +1,27 @@
-# Render deployment configuration for x402-service
+# Render deployment configuration for x402-security-service
 services:
   - type: web
-    name: x402-service
+    name: x402-security-service
     runtime: docker
     dockerfilePath: ./Dockerfile
-    buildCommand: docker build -t x402-service .
+    buildCommand: go build -o x402-service .
     startCommand: ./x402-service
     envVars:
       - key: PORT
         value: 8080
-      - key: PRICE_API_KEY
+      - key: METRICS_PORT
+        value: 9090
+      - key: RECEIVER_ADDRESS
+        value: 0x120e011fB8a12bfcB61e5c1d751C26A5D33Aae91
+      - key: ETH_RPC_URL
+        value: https://eth.drpc.org
+      - key: BASESCAN_API_KEY
+        sync: false
+      - key: ETHERSCAN_API_KEY
         sync: false
     healthCheckPath: /health
     autoDeploy: true
 
 # Environment variables to set in Render dashboard:
-# - PRICE_API_KEY (optional, for CoinGecko Pro)
-# - ALLOWED_ORIGINS (optional, defaults to *)
-# - LOG_LEVEL (optional, defaults to info)
+# - BASESCAN_API_KEY (required for contract scanning on Base)
+# - ETHERSCAN_API_KEY (required for contract scanning on Ethereum)
