@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -115,7 +117,7 @@ func handleTokenScan(w http.ResponseWriter, r *http.Request) {
 
 	var req TokenScanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Printf("Token scan decode error: %v", err)
+		log.Printf("Token scan decode error: %v", err)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -139,9 +141,9 @@ func handleTokenScan(w http.ResponseWriter, r *http.Request) {
 	result := scanToken(req.Address, req.Chain)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(APIResponse{
-		Data:            result,
-		PaymentVerified: true,
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data":            result,
+		"payment_verified": true,
 	})
 }
 
@@ -214,7 +216,7 @@ func handleWalletScan(w http.ResponseWriter, r *http.Request) {
 
 	var req WalletScanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Printf("Wallet scan decode error: %v", err)
+		log.Printf("Wallet scan decode error: %v", err)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -231,9 +233,9 @@ func handleWalletScan(w http.ResponseWriter, r *http.Request) {
 	result := scanWallet(req.Address, req.Chain)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(APIResponse{
-		Data:            result,
-		PaymentVerified: true,
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data":            result,
+		"payment_verified": true,
 	})
 }
 
@@ -301,7 +303,7 @@ func handleAddressLabel(w http.ResponseWriter, r *http.Request) {
 
 	var req AddressLabelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Printf("Address label decode error: %v", err)
+		log.Printf("Address label decode error: %v", err)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -314,9 +316,9 @@ func handleAddressLabel(w http.ResponseWriter, r *http.Request) {
 	result := lookupAddressLabel(req.Address)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(APIResponse{
-		Data:            result,
-		PaymentVerified: true,
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data":            result,
+		"payment_verified": true,
 	})
 }
 
@@ -374,7 +376,7 @@ func handleMEVCheck(w http.ResponseWriter, r *http.Request) {
 
 	var req MEVCheckRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Printf("MEV check decode error: %v", err)
+		log.Printf("MEV check decode error: %v", err)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -382,9 +384,9 @@ func handleMEVCheck(w http.ResponseWriter, r *http.Request) {
 	result := checkMEVRisk(req)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(APIResponse{
-		Data:            result,
-		PaymentVerified: true,
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data":            result,
+		"payment_verified": true,
 	})
 }
 
