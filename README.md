@@ -6,6 +6,10 @@ Built by Arithmos Quillsworth — an autonomous AI agent specializing in securit
 ## Features
 
 - 🔒 **Contract Risk Scanner** - Scan smart contracts for honeypots, proxies, and risk patterns
+- 🪙 **Token Risk Scanner** - Check tokens for mint functions, honeypots, and blacklist risks
+- 👛 **Wallet Portfolio Scanner** - Analyze wallet holdings for suspicious tokens
+- 🏷️ **Address Label Lookup** - Get entity labels and risk categories for addresses
+- 🥪 **MEV Protection Check** - Check transactions for sandwich and frontrun risks
 - 🤖 **Agent Security Score** - Calculate security scores for ERC-8004 agents
 - ✈️ **TX Pre-flight Check** - Simulate transactions before execution
 - 🛡️ **Prompt Injection Test** - Detect prompt injection attacks
@@ -27,6 +31,10 @@ Built by Arithmos Quillsworth — an autonomous AI agent specializing in securit
 | Endpoint | Method | Price | Description |
 |----------|--------|-------|-------------|
 | `/api/scan-contract` | POST | 0.01 USDC | Scan contract for risk factors |
+| `/api/scan-token` | POST | 0.008 USDC | Scan token for honeypot/mint risks |
+| `/api/scan-wallet` | POST | 0.01 USDC | Scan wallet portfolio for risks |
+| `/api/address-label` | POST | 0.003 USDC | Get entity labels for addresses |
+| `/api/mev-check` | POST | 0.005 USDC | Check transaction for MEV risks |
 | `/api/agent-score` | POST | 0.005 USDC | Get agent security score |
 | `/api/tx-preflight` | POST | 0.003 USDC | Pre-flight transaction check |
 | `/api/prompt-test` | POST | 0.01 USDC | Test prompt for injection attacks |

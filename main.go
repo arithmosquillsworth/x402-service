@@ -686,6 +686,198 @@ func main() {
 		handlePromptTest(w, r, promptGuard, metrics)
 	})
 
+	// NEW ENDPOINTS - Token Scanner ($0.008 USDC)
+	mux.HandleFunc("/api/scan-token", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		start := time.Now()
+		price := "0.008" // USDC
+		priceFloat := 0.008
+
+		paymentHeader := r.Header.Get("X-Payment-Response")
+		if paymentHeader == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Payment required",
+				"version": "x402/1.0",
+				"payment": PaymentRequirement{
+					Scheme:      "x402",
+					Network:     config.Network,
+					MaxAmount:   price,
+					MinAmount:   price,
+					Asset:       config.Asset,
+					Receiver:    config.Receiver,
+					Description: "Scan token contract for honeypot and mint risks",
+				},
+			})
+			metrics.RecordRequest("/api/scan-token", "402")
+			metrics.RecordResponseTime("/api/scan-token", time.Since(start))
+			return
+		}
+
+		if !validatePayment(paymentHeader, price, config.Asset, config.Receiver) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Invalid or insufficient payment",
+				"version": "x402/1.0",
+			})
+			metrics.RecordRequest("/api/scan-token", "402")
+			metrics.RecordResponseTime("/api/scan-token", time.Since(start))
+			return
+		}
+
+		metrics.RecordPayment("/api/scan-token", priceFloat)
+		handleTokenScan(w, r)
+	})
+
+	// Wallet Portfolio Scanner ($0.01 USDC)
+	mux.HandleFunc("/api/scan-wallet", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		start := time.Now()
+		price := "0.01" // USDC
+		priceFloat := 0.01
+
+		paymentHeader := r.Header.Get("X-Payment-Response")
+		if paymentHeader == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Payment required",
+				"version": "x402/1.0",
+				"payment": PaymentRequirement{
+					Scheme:      "x402",
+					Network:     config.Network,
+					MaxAmount:   price,
+					MinAmount:   price,
+					Asset:       config.Asset,
+					Receiver:    config.Receiver,
+					Description: "Scan wallet portfolio for risks",
+				},
+			})
+			metrics.RecordRequest("/api/scan-wallet", "402")
+			metrics.RecordResponseTime("/api/scan-wallet", time.Since(start))
+			return
+		}
+
+		if !validatePayment(paymentHeader, price, config.Asset, config.Receiver) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Invalid or insufficient payment",
+				"version": "x402/1.0",
+			})
+			metrics.RecordRequest("/api/scan-wallet", "402")
+			metrics.RecordResponseTime("/api/scan-wallet", time.Since(start))
+			return
+		}
+
+		metrics.RecordPayment("/api/scan-wallet", priceFloat)
+		handleWalletScan(w, r)
+	})
+
+	// Address Label Lookup ($0.003 USDC)
+	mux.HandleFunc("/api/address-label", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		start := time.Now()
+		price := "0.003" // USDC
+		priceFloat := 0.003
+
+		paymentHeader := r.Header.Get("X-Payment-Response")
+		if paymentHeader == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Payment required",
+				"version": "x402/1.0",
+				"payment": PaymentRequirement{
+					Scheme:      "x402",
+					Network:     config.Network,
+					MaxAmount:   price,
+					MinAmount:   price,
+					Asset:       config.Asset,
+					Receiver:    config.Receiver,
+					Description: "Get labels and entity info for address",
+				},
+			})
+			metrics.RecordRequest("/api/address-label", "402")
+			metrics.RecordResponseTime("/api/address-label", time.Since(start))
+			return
+		}
+
+		if !validatePayment(paymentHeader, price, config.Asset, config.Receiver) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Invalid or insufficient payment",
+				"version": "x402/1.0",
+			})
+			metrics.RecordRequest("/api/address-label", "402")
+			metrics.RecordResponseTime("/api/address-label", time.Since(start))
+			return
+		}
+
+		metrics.RecordPayment("/api/address-label", priceFloat)
+		handleAddressLabel(w, r)
+	})
+
+	// MEV Protection Check ($0.005 USDC)
+	mux.HandleFunc("/api/mev-check", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		start := time.Now()
+		price := "0.005" // USDC
+		priceFloat := 0.005
+
+		paymentHeader := r.Header.Get("X-Payment-Response")
+		if paymentHeader == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Payment required",
+				"version": "x402/1.0",
+				"payment": PaymentRequirement{
+					Scheme:      "x402",
+					Network:     config.Network,
+					MaxAmount:   price,
+					MinAmount:   price,
+					Asset:       config.Asset,
+					Receiver:    config.Receiver,
+					Description: "Check transaction for MEV/sandwich risk",
+				},
+			})
+			metrics.RecordRequest("/api/mev-check", "402")
+			metrics.RecordResponseTime("/api/mev-check", time.Since(start))
+			return
+		}
+
+		if !validatePayment(paymentHeader, price, config.Asset, config.Receiver) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusPaymentRequired)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "Invalid or insufficient payment",
+				"version": "x402/1.0",
+			})
+			metrics.RecordRequest("/api/mev-check", "402")
+			metrics.RecordResponseTime("/api/mev-check", time.Since(start))
+			return
+		}
+
+		metrics.RecordPayment("/api/mev-check", priceFloat)
+		handleMEVCheck(w, r)
+	})
+
 	// Agent info endpoint
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -702,6 +894,10 @@ func main() {
 				"/api/validators",
 				"/api/price",
 				"/api/scan-contract",
+				"/api/scan-token",
+				"/api/scan-wallet",
+				"/api/address-label",
+				"/api/mev-check",
 				"/api/agent-score",
 				"/api/tx-preflight",
 				"/api/prompt-test",
@@ -712,6 +908,10 @@ func main() {
 				"/api/validators":     "0.005 USDC",
 				"/api/price":          "0.002 USDC",
 				"/api/scan-contract":  "0.01 USDC",
+				"/api/scan-token":     "0.008 USDC",
+				"/api/scan-wallet":    "0.01 USDC",
+				"/api/address-label":  "0.003 USDC",
+				"/api/mev-check":      "0.005 USDC",
 				"/api/agent-score":    "0.005 USDC",
 				"/api/tx-preflight":   "0.003 USDC",
 				"/api/prompt-test":    "0.01 USDC",
