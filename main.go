@@ -902,6 +902,10 @@ func main() {
 				"/api/tx-preflight",
 				"/api/prompt-test",
 				"/metrics",
+				"/mcp", // MCP endpoint for tool discovery
+				"/mcp/call", // MCP endpoint for tool execution
+				"/.well-known/agent-card.json", // A2A endpoint
+				"/.well-known/oasf.json", // OASF endpoint
 			},
 			"pricing": map[string]string{
 				"/api/gas":            "0.001 USDC",
@@ -915,12 +919,23 @@ func main() {
 				"/api/agent-score":    "0.005 USDC",
 				"/api/tx-preflight":   "0.003 USDC",
 				"/api/prompt-test":    "0.01 USDC",
+				"/mcp":                "0.00 USDC", // Free endpoint for discovery
+				"/mcp/call":           "dynamic", // Pricing handled by individual tool calls
+				"/.well-known/agent-card.json": "0.00 USDC", // Free endpoint for discovery
+				"/.well-known/oasf.json":      "0.00 USDC", // Free endpoint for discovery
 			},
 			"documentation": "https://arithmos.dev",
 		})
 		metrics.RecordRequest("/", "200")
 		metrics.RecordResponseTime("/", time.Since(start))
 	})
+
+
+	// MCP, A2A, OASF endpoints
+	mux.HandleFunc("/mcp", handleMCPInfo)
+	mux.HandleFunc("/mcp/call", handleMCPCall)
+	mux.HandleFunc("/.well-known/agent-card.json", handleAgentCard)
+	mux.HandleFunc("/.well-known/oasf.json", handleOASFManifest)
 
 	log.Printf("🚀 x402 service starting on :%s", port)
 	log.Printf("💰 Receiver: %s", config.Receiver)
