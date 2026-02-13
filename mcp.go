@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"time"
 )
 
 // MCP (Model Context Protocol) Server Implementation
@@ -266,7 +266,7 @@ func handleMCPGasPrices(w http.ResponseWriter, r *http.Request, args map[string]
 
 func handleMCPValidatorQueue(w http.ResponseWriter, r *http.Request, args map[string]interface{}) {
 	beaconClient := NewBeaconClient()
-	validatorData, err := beaconClient.fetchValidatorQueue()
+	validatorData, err := beaconClient.fetchValidatorData()
 	
 	if err != nil {
 		json.NewEncoder(w).Encode(MCPResponse{
@@ -294,11 +294,11 @@ func handleMCPScanToken(w http.ResponseWriter, r *http.Request, args map[string]
 
 	chain, _ := args["chain"].(string)
 	if chain == "" {
-		chain = "1" // Default to Ethereum mainnet
+		chain = "base" // Default to Base
 	}
 
-	// Use existing scan function
-	result := performTokenScan(tokenAddress, chain)
+	// Use internal scan function
+	result := scanToken(tokenAddress, chain)
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
 	
 	json.NewEncoder(w).Encode(MCPResponse{
@@ -318,10 +318,10 @@ func handleMCPScanWallet(w http.ResponseWriter, r *http.Request, args map[string
 
 	chain, _ := args["chain"].(string)
 	if chain == "" {
-		chain = "1"
+		chain = "base"
 	}
 
-	result := performWalletScan(walletAddress, chain)
+	result := scanWallet(walletAddress, chain)
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
 	
 	json.NewEncoder(w).Encode(MCPResponse{
@@ -339,7 +339,7 @@ func handleMCPAddressLabels(w http.ResponseWriter, r *http.Request, args map[str
 		return
 	}
 
-	result := performAddressLabelLookup(address)
+	result := lookupAddressLabel(address)
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
 	
 	json.NewEncoder(w).Encode(MCPResponse{
@@ -351,6 +351,7 @@ func handleMCPMEVCheck(w http.ResponseWriter, r *http.Request, args map[string]i
 	txData, _ := args["txData"].(string)
 	to, _ := args["to"].(string)
 	value, _ := args["value"].(string)
+	from, _ := args["from"].(string)
 
 	if txData == "" || to == "" {
 		json.NewEncoder(w).Encode(MCPResponse{
@@ -360,7 +361,13 @@ func handleMCPMEVCheck(w http.ResponseWriter, r *http.Request, args map[string]i
 		return
 	}
 
-	result := performMEVCheck(txData, to, value)
+	req := MEVCheckRequest{
+		From:  from,
+		To:    to,
+		Value: value,
+		Data:  txData,
+	}
+	result := checkMEVRisk(req)
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
 	
 	json.NewEncoder(w).Encode(MCPResponse{
@@ -379,7 +386,7 @@ func handleMCPEthPrice(w http.ResponseWriter, r *http.Request, args map[string]i
 	}
 
 	json.NewEncoder(w).Encode(MCPResponse{
-		Content: []MCPContent{{Type: "text", Text: `{"price_usd": ` + fmt.Sprintf("%.2f", price) + `}`}},
+		Content: []MCPContent{{Type: "text", Text: fmt.Sprintf(`{"price_usd": %.2f}`, price)}},
 	})
 }
 
@@ -397,7 +404,25 @@ func handleMCPPreflight(w http.ResponseWriter, r *http.Request, args map[string]
 		return
 	}
 
-	result := performTxPreflight(txData, to, value, from)
+	// Create TxSimulator and simulate
+	rpcURL := getEnv("ETH_RPC_URL", "https://ethereum-rpc.publicnode.com")
+	simulator := NewTxSimulator(rpcURL)
+	req := TxPreflightRequest{
+		From:  from,
+		To:    to,
+		Value: value,
+		Data:  txData,
+	}
+	
+	result, err := simulator.Simulate(&req)
+	if err != nil {
+		json.NewEncoder(w).Encode(MCPResponse{
+			Content: []MCPContent{{Type: "text", Text: "Error simulating transaction: " + err.Error()}},
+			IsError: true,
+		})
+		return
+	}
+	
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
 	
 	json.NewEncoder(w).Encode(MCPResponse{
