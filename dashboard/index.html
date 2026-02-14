@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Security Dashboard | Arithmos</title>
+    <style>
+        :root {
+            --purple: #a277ff;
+            --green: #61ffca;
+            --orange: #ffca85;
+            --pink: #f694ff;
+            --blue: #82e2ff;
+            --red: #ff6767;
+            --bg: #15141b;
+            --card: #1f1e28;
+            --text: #edecee;
+            --text-muted: #6d6c7b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--card);
+            margin-bottom: 2rem;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--purple), var(--blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        header p { color: var(--text-muted); }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(162, 119, 255, 0.1);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(162, 119, 255, 0.3);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        .card-icon.purple { background: rgba(162, 119, 255, 0.2); color: var(--purple); }
+        .card-icon.green { background: rgba(97, 255, 202, 0.2); color: var(--green); }
+        .card-icon.orange { background: rgba(255, 202, 133, 0.2); color: var(--orange); }
+        .card-icon.pink { background: rgba(246, 148, 255, 0.2); color: var(--pink); }
+        .card h3 { font-size: 1.1rem; color: var(--text); }
+        .card p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
+        .tool-section {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(162, 119, 255, 0.1);
+        }
+        .tool-section h2 {
+            color: var(--purple);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        input, textarea, select {
+            background: var(--bg);
+            border: 1px solid rgba(162, 119, 255, 0.2);
+            color: var(--text);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            flex: 1;
+            min-width: 200px;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--purple);
+        }
+        button {
+            background: linear-gradient(135deg, var(--purple), var(--blue));
+            color: var(--bg);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .result {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-left: 3px solid var(--purple);
+            display: none;
+        }
+        .result.show { display: block; }
+        .result.safe { border-left-color: var(--green); }
+        .result.warning { border-left-color: var(--orange); }
+        .result.danger { border-left-color: var(--red); }
+        .score {
+            font-size: 3rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .score.safe { color: var(--green); }
+        .score.warning { color: var(--orange); }
+        .score.danger { color: var(--red); }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-badge.safe { background: rgba(97, 255, 202, 0.2); color: var(--green); }
+        .status-badge.warning { background: rgba(255, 202, 133, 0.2); color: var(--orange); }
+        .status-badge.danger { background: rgba(255, 103, 103, 0.2); color: var(--red); }
+        .api-info {
+            background: rgba(162, 119, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 2rem;
+            font-size: 0.85rem;
+        }
+        .api-info code {
+            background: var(--bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            color: var(--green);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+        .loading.show { display: block; }
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--card);
+            margin-top: 2rem;
+        }
+        footer a { color: var(--purple); text-decoration: none; }
+        .wallet-display {
+            background: rgba(97, 255, 202, 0.1);
+            border: 1px solid var(--green);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .wallet-display span { color: var(--green); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔮 Agent Security Dashboard</h1>
+            <p>Professional security tooling for AI agents on Ethereum</p>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon purple">🔍</div>
+                    <div>
+                        <h3>Contract Scanner</h3>
+                        <p>Detect honeypots, proxies, and risks</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon green">🛡️</div>
+                    <div>
+                        <h3>Agent Scorer</h3>
+                        <p>Reputation & security assessment</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon orange">⚡</div>
+                    <div>
+                        <h3>Tx Simulator</h3>
+                        <p>Pre-flight transaction checks</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon pink">🔐</div>
+                    <div>
+                        <h3>Prompt Guard</h3>
+                        <p>Injection & jailbreak detection</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tool-section">
+            <h2>🔍 Contract Scanner</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1rem;">
+                Analyze smart contracts for security risks before interaction.
+            </p>
+            <div class="input-group">
+                <input type="text" id="contract-address" placeholder="Contract address (0x...)" maxlength="42">
+                <select id="contract-chain">
+                    <option value="base">Base</option>
+                    <option value="ethereum">Ethereum</option>
+                </select>
+                <button onclick="scanContract()">Scan Contract</button>
+            </div>
+            <div class="loading" id="contract-loading">Scanning contract...</div>
+            <div class="result" id="contract-result"></div>
+        </div>
+
+        <div class="tool-section">
+            <h2>🛡️ Agent Scorer</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1rem;">
+                Calculate security reputation score for any ERC-8004 agent.
+            </p>
+            <div class="input-group">
+                <input type="text" id="agent-id" placeholder="Agent ID or wallet address (0x...)">
+                <button onclick="scoreAgent()">Score Agent</button>
+            </div>
+            <div class="loading" id="agent-loading">Calculating score...</div>
+            <div class="result" id="agent-result"></div>
+        </div>
+
+        <div class="tool-section">
+            <h2>⚡ Transaction Simulator</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1rem;">
+                Simulate transactions before signing to detect risks.
+            </p>
+            <div class="input-group">
+                <input type="text" id="tx-from" placeholder="From address (0x...)">
+                <input type="text" id="tx-to" placeholder="To address (0x...)">
+            </div>
+            <div class="input-group">
+                <input type="text" id="tx-value" placeholder="Value (wei)">
+                <input type="text" id="tx-data" placeholder="Data (hex, optional)">
+                <button onclick="simulateTx()">Simulate</button>
+            </div>
+            <div class="loading" id="tx-loading">Simulating transaction...</div>
+            <div class="result" id="tx-result"></div>
+        </div>
+
+        <div class="tool-section">
+            <h2>🔐 Prompt Guard</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1rem;">
+                Test prompts for injection attacks and jailbreak attempts.
+            </p>
+            <div class="input-group" style="flex-direction: column;">
+                <textarea id="prompt-input" rows="4" placeholder="Enter prompt to test..."></textarea>
+                <button onclick="testPrompt()" style="align-self: flex-start;">Test Prompt</button>
+            </div>
+            <div class="loading" id="prompt-loading">Analyzing prompt...</div>
+            <div class="result" id="prompt-result"></div>
+        </div>
+
+        <div class="api-info">
+            <strong>API Endpoint:</strong> <code id="api-base">https://api-x402.arithmos.dev</code><br>
+            <strong>Documentation:</strong> <a href="/docs" style="color: var(--purple);">OpenAPI Spec</a> | 
+            <a href="https://github.com/arithmosquillsworth/x402-service" style="color: var(--purple);">GitHub</a>
+        </div>
+
+        <footer>
+            <p>Powered by <a href="https://arithmos.dev">Arithmos</a> • Built for AI agents</p>
+            <p style="margin-top: 0.5rem; font-size: 0.8rem;">Wallet: 0x120e011fB8a12bfcB61e5c1d751C26A5D33Aae91</p>
+        </footer>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin.includes('localhost') 
+            ? 'http://localhost:8080' 
+            : 'https://api-x402.arithmos.dev';
+        
+        document.getElementById('api-base').textContent = API_BASE;
+
+        async function scanContract() {
+            const address = document.getElementById('contract-address').value;
+            const chain = document.getElementById('contract-chain').value;
+            const resultDiv = document.getElementById('contract-result');
+            const loadingDiv = document.getElementById('contract-loading');
+
+            if (!address || !address.startsWith('0x')) {
+                alert('Please enter a valid contract address');
+                return;
+            }
+
+            loadingDiv.classList.add('show');
+            resultDiv.classList.remove('show');
+
+            try {
+                const response = await fetch(`${API_BASE}/security/contract/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address, chain })
+                });
+                const data = await response.json();
+                displayContractResult(data);
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: var(--red);">Error: ${error.message}</p>`;
+                resultDiv.classList.add('show', 'danger');
+            } finally {
+                loadingDiv.classList.remove('show');
+            }
+        }
+
+        function displayContractResult(data) {
+            const resultDiv = document.getElementById('contract-result');
+            const riskClass = data.risk_score < 30 ? 'safe' : data.risk_score < 70 ? 'warning' : 'danger';
+            
+            resultDiv.innerHTML = `
+                <div class="score ${riskClass}">${data.risk_score}/100</div>
+                <p style="text-align: center; margin-bottom: 1rem;">
+                    <span class="status-badge ${riskClass}">${data.is_verified ? '✓ Verified' : '⚠ Unverified'}</span>
+                    ${data.is_honeypot ? '<span class="status-badge danger">🚨 HONEYPOT</span>' : ''}
+                    ${data.is_proxy ? '<span class="status-badge warning">📋 Proxy</span>' : ''}
+                </p>
+                ${data.flags.length ? `<p><strong>Flags:</strong> ${data.flags.join(', ')}</p>` : ''}
+                ${data.warnings.length ? `<p style="color: var(--orange);"><strong>⚠ Warnings:</strong><br>${data.warnings.map(w => `• ${w}`).join('<br>')}</p>` : ''}
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">
+                    Scanned at: ${new Date(data.scanned_at * 1000).toLocaleString()}
+                    ${data.cached ? ' (cached)' : ''}
+                </p>
+            `;
+            resultDiv.classList.add('show', riskClass);
+        }
+
+        async function scoreAgent() {
+            const agentId = document.getElementById('agent-id').value;
+            const resultDiv = document.getElementById('agent-result');
+            const loadingDiv = document.getElementById('agent-loading');
+
+            if (!agentId) {
+                alert('Please enter an agent ID');
+                return;
+            }
+
+            loadingDiv.classList.add('show');
+            resultDiv.classList.remove('show');
+
+            try {
+                const response = await fetch(`${API_BASE}/security/agent/score`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: agentId })
+                });
+                const data = await response.json();
+                displayAgentResult(data);
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: var(--red);">Error: ${error.message}</p>`;
+                resultDiv.classList.add('show', 'danger');
+            } finally {
+                loadingDiv.classList.remove('show');
+            }
+        }
+
+        function displayAgentResult(data) {
+            const resultDiv = document.getElementById('agent-result');
+            const scoreClass = data.security_score >= 70 ? 'safe' : data.security_score >= 40 ? 'warning' : 'danger';
+            
+            resultDiv.innerHTML = `
+                <div class="score ${scoreClass}">${data.security_score}/100</div>
+                <p style="text-align: center; margin-bottom: 1rem;">
+                    <span class="status-badge ${data.has_security_stack ? 'safe' : 'warning'}">
+                        ${data.has_security_stack ? '✓ Security Stack' : '⚠ No Stack'}
+                    </span>
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1rem 0;">
+                    <div style="background: var(--bg); padding: 0.75rem; border-radius: 6px;">
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">Failed Tx Rate</div>
+                        <div style="color: ${data.failed_tx_rate > 0.1 ? 'var(--red)' : 'var(--green)'}; font-weight: bold;">
+                            ${(data.failed_tx_rate * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                    <div style="background: var(--bg); padding: 0.75rem; border-radius: 6px;">
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">Registration</div>
+                        <div style="font-weight: bold;">${data.registration_days} days</div>
+                    </div>
+                    <div style="background: var(--bg); padding: 0.75rem; border-radius: 6px;">
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">Feedback Rating</div>
+                        <div style="color: var(--green); font-weight: bold;">${data.feedback_rating.toFixed(1)}/5.0</div>
+                    </div>
+                    <div style="background: var(--bg); padding: 0.75rem; border-radius: 6px;">
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">Agent ID</div>
+                        <div style="font-family: monospace; font-size: 0.8rem;">${data.agent_id.slice(0, 10)}...${data.agent_id.slice(-8)}</div>
+                    </div>
+                </div>
+                ${data.factors.length ? `<p><strong>Factors:</strong> ${data.factors.join(', ')}</p>` : ''}
+            `;
+            resultDiv.classList.add('show', scoreClass);
+        }
+
+        async function simulateTx() {
+            const from = document.getElementById('tx-from').value;
+            const to = document.getElementById('tx-to').value;
+            const value = document.getElementById('tx-value').value;
+            const data = document.getElementById('tx-data').value;
+            const resultDiv = document.getElementById('tx-result');
+            const loadingDiv = document.getElementById('tx-loading');
+
+            if (!from || !to) {
+                alert('Please enter from and to addresses');
+                return;
+            }
+
+            loadingDiv.classList.add('show');
+            resultDiv.classList.remove('show');
+
+            try {
+                const response = await fetch(`${API_BASE}/security/tx/preflight`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from, to, value: value || '0', data: data || '0x' })
+                });
+                const result = await response.json();
+                displayTxResult(result);
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: var(--red);">Error: ${error.message}</p>`;
+                resultDiv.classList.add('show', 'danger');
+            } finally {
+                loadingDiv.classList.remove('show');
+            }
+        }
+
+        function displayTxResult(data) {
+            const resultDiv = document.getElementById('tx-result');
+            const riskClass = data.safe ? 'safe' : data.risk_score < 70 ? 'warning' : 'danger';
+            
+            resultDiv.innerHTML = `
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <span class="status-badge ${riskClass}">
+                        ${data.safe ? '✓ Safe to Execute' : '⚠ Risk Detected'}
+                    </span>
+                </div>
+                <div class="score ${riskClass}">${data.risk_score}/100</div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1rem 0;">
+                    <div style="background: var(--bg); padding: 0.75rem; border-radius: 6px;">
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">Gas Estimate</div>
+                        <div style="font-weight: bold; color: var(--blue);">${data.gas_estimate}</div>
+                    </div>
+                    <div style="background: var(--bg); padding: 0.75rem; border-radius: 6px;">
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">Simulation</div>
+                        <div style="color: ${data.simulation_success ? 'var(--green)' : 'var(--red)'}; font-weight: bold;">
+                            ${data.simulation_success ? '✓ Success' : '✗ Failed'}
+                        </div>
+                    </div>
+                </div>
+                ${data.warnings.length ? `<p style="color: var(--orange);"><strong>⚠ Warnings:</strong><br>${data.warnings.map(w => `• ${w}`).join('<br>')}</p>` : ''}
+                ${data.errors.length ? `<p style="color: var(--red);"><strong>✗ Errors:</strong><br>${data.errors.map(e => `• ${e}`).join('<br>')}</p>` : ''}
+                ${data.recommendations.length ? `<p style="color: var(--green);"><strong>💡 Recommendations:</strong><br>${data.recommendations.map(r => `• ${r}`).join('<br>')}</p>` : ''}
+            `;
+            resultDiv.classList.add('show', riskClass);
+        }
+
+        async function testPrompt() {
+            const prompt = document.getElementById('prompt-input').value;
+            const resultDiv = document.getElementById('prompt-result');
+            const loadingDiv = document.getElementById('prompt-loading');
+
+            if (!prompt) {
+                alert('Please enter a prompt to test');
+                return;
+            }
+
+            loadingDiv.classList.add('show');
+            resultDiv.classList.remove('show');
+
+            try {
+                const response = await fetch(`${API_BASE}/security/prompt/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+                const data = await response.json();
+                displayPromptResult(data);
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: var(--red);">Error: ${error.message}</p>`;
+                resultDiv.classList.add('show', 'danger');
+            } finally {
+                loadingDiv.classList.remove('show');
+            }
+        }
+
+        function displayPromptResult(data) {
+            const resultDiv = document.getElementById('prompt-result');
+            const riskClass = data.safe ? 'safe' : data.threat_level === 'medium' ? 'warning' : 'danger';
+            
+            resultDiv.innerHTML = `
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <span class="status-badge ${riskClass}">
+                        ${data.safe ? '✓ Safe' : '🚨 ' + data.threat_level.toUpperCase() + ' RISK'}
+                    </span>
+                </div>
+                <div class="score ${riskClass}">${data.risk_score}/100</div>
+                ${data.patterns.length ? `<p><strong>Patterns Detected:</strong> ${data.patterns.join(', ')}</p>` : ''}
+                ${data.detections.length ? `<p style="color: var(--orange);"><strong>🔍 Detections:</strong><br>${data.detections.map(d => `• ${d}`).join('<br>')}</p>` : ''}
+                ${data.warnings.length ? `<p style="color: var(--red);"><strong>⚠ Warnings:</strong><br>${data.warnings.map(w => `• ${w}`).join('<br>')}</p>` : ''}
+            `;
+            resultDiv.classList.add('show', riskClass);
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('contract-address')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') scanContract();
+        });
+        document.getElementById('agent-id')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') scoreAgent();
+        });
+    </script>
+</body>
+</html>

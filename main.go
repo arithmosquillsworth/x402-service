@@ -930,6 +930,9 @@ func main() {
 		metrics.RecordResponseTime("/", time.Since(start))
 	})
 
+	// Dashboard static files
+	dashboardFS := http.FileServer(http.Dir("./dashboard"))
+	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", dashboardFS))
 
 	// MCP, A2A, OASF endpoints
 	mux.HandleFunc("/mcp", handleMCPInfo)
